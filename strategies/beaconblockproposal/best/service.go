@@ -23,10 +23,12 @@ import (
 	"github.com/attestantio/vouch/services/cache"
 	"github.com/attestantio/vouch/services/chaintime"
 	"github.com/attestantio/vouch/services/metrics"
+	"github.com/attestantio/vouch/services/postgresql"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/rs/zerolog"
 	zerologger "github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 // Service is the provider for beacon block proposals.
@@ -38,6 +40,7 @@ type Service struct {
 	signedBeaconBlockProvider    eth2client.SignedBeaconBlockProvider
 	timeout                      time.Duration
 	blockRootToSlotCache         cache.BlockRootToSlotProvider
+	dbClient                     *postgresql.PostgresDBService
 
 	// Spec values for scoring proposals.
 	slotsPerEpoch      uint64
@@ -150,6 +153,14 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		return nil, errors.New("WEIGHT_DENOMINATOR of unexpected type")
 	}
 
+	dbUrl := viper.GetViper().GetString("database.url")
+
+	idbClient, err := postgresql.ConnectToDB(context.Background(), dbUrl)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to database")
+	}
+
 	s := &Service{
 		processConcurrency:           parameters.processConcurrency,
 		chainTime:                    parameters.chainTime,
@@ -166,6 +177,7 @@ func New(ctx context.Context, params ...Parameter) (*Service, error) {
 		proposerWeight:               proposerWeight,
 		weightDenominator:            weightDenominator,
 		priorBlocksVotes:             make(map[phase0.Root]*priorBlockVotes),
+		dbClient:                     idbClient,
 	}
 	log.Trace().Int64("process_concurrency", s.processConcurrency).Msg("Set process concurrency")
 

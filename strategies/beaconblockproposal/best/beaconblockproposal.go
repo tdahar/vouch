@@ -16,6 +16,7 @@ package best
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	eth2client "github.com/attestantio/go-eth2-client"
@@ -29,6 +30,7 @@ type beaconBlockResponse struct {
 	provider string
 	proposal *spec.VersionedBeaconBlock
 	score    float64
+	duration float64
 }
 
 // BeaconBlockProposal provides the best beacon block proposal from a number of beacon nodes.
@@ -88,9 +90,15 @@ func (s *Service) BeaconBlockProposal(ctx context.Context, slot phase0.Slot, ran
 			log.Debug().Dur("elapsed", time.Since(started)).Int("responded", responded).Int("errored", errored).Int("timed_out", timedOut).Msg("Hard timeout reached")
 		case err := <-errCh:
 			errored++
+			fmt.Printf("Block Proposal error:%s\n", err)
 			log.Debug().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
 		case resp := <-respCh:
 			responded++
+			fmt.Printf("Block Proposal from: %s, slot: %d, score: %f\n", resp.provider, slot, resp.score)
+			err := s.dbClient.InsertNewScore(int(slot), resp.provider, resp.score, resp.duration)
+			if err != nil {
+				log.Debug().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
+			}
 			if bestProposal == nil || resp.score > bestScore {
 				bestProposal = resp.proposal
 				bestScore = resp.score
@@ -123,7 +131,11 @@ func (s *Service) beaconBlockProposal(ctx context.Context,
 	randaoReveal phase0.BLSSignature,
 	graffiti []byte,
 ) {
+
+	snapshot := time.Now()
 	proposal, err := provider.BeaconBlockProposal(ctx, slot, randaoReveal, graffiti)
+	duration := time.Since(snapshot)
+	fmt.Printf("Requested block from: %s, Timestamp: %s, Duration: %f\n", name, snapshot.String(), duration.Seconds())
 	s.clientMonitor.ClientOperation(name, "beacon block proposal", err == nil, time.Since(started))
 	if err != nil {
 		errCh <- errors.Wrap(err, name)
@@ -139,5 +151,6 @@ func (s *Service) beaconBlockProposal(ctx context.Context,
 		provider: name,
 		proposal: proposal,
 		score:    score,
+		duration: duration.Seconds(),
 	}
 }
