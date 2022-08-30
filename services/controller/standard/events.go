@@ -164,10 +164,10 @@ func (s *Service) refreshProposerDutiesForEpoch(ctx context.Context, epoch phase
 	}
 
 	// Expect at least one validator.
-	if len(validatorIndices) == 0 {
-		log.Warn().Msg("No active validators; not validating")
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	log.Warn().Msg("No active validators; not validating")
+	// 	return
+	// }
 
 	s.scheduleProposals(ctx, epoch, validatorIndices, true /* notCurrentSlot */)
 }
@@ -194,10 +194,10 @@ func (s *Service) refreshAttesterDutiesForEpoch(ctx context.Context, epoch phase
 	}
 
 	// Expect at least one validator.
-	if len(validatorIndices) == 0 {
-		log.Warn().Msg("No active validators; not validating")
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	log.Warn().Msg("No active validators; not validating")
+	// 	return
+	// }
 
 	// Reschedule attestations.
 	// Only reschedule current slot if its job was cancelled.
@@ -257,10 +257,10 @@ func (s *Service) refreshSyncCommitteeDutiesForEpochPeriod(ctx context.Context, 
 	}
 
 	// Expect at least one validator.
-	if len(validatorIndices) == 0 {
-		log.Warn().Msg("No active validators; not validating")
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	log.Warn().Msg("No active validators; not validating")
+	// 	return
+	// }
 
 	// Reschedule sync committee messages.
 	go s.scheduleSyncCommitteeMessages(ctx, epoch, validatorIndices, false /* notCurrentSlot */)

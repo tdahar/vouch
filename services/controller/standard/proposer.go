@@ -28,10 +28,10 @@ func (s *Service) scheduleProposals(ctx context.Context,
 	validatorIndices []phase0.ValidatorIndex,
 	notCurrentSlot bool,
 ) {
-	if len(validatorIndices) == 0 {
-		// Nothing to do.
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	// Nothing to do.
+	// 	return
+	// }
 
 	started := time.Now()
 	log.Trace().Uint64("epoch", uint64(epoch)).Msg("Scheduling proposals")
@@ -47,6 +47,8 @@ func (s *Service) scheduleProposals(ctx context.Context,
 	duties := make([]*beaconblockproposer.Duty, 0, len(resp))
 	firstSlot := s.chainTimeService.FirstSlotOfEpoch(epoch)
 	lastSlot := s.chainTimeService.FirstSlotOfEpoch(epoch+1) - 1
+	addedSlots := 0
+	oneDutyPerSlot := make([]bool, 32)
 	for _, respDuty := range resp {
 		if respDuty.Slot < firstSlot || respDuty.Slot > lastSlot {
 			log.Warn().
@@ -55,7 +57,16 @@ func (s *Service) scheduleProposals(ctx context.Context,
 				Msg("Proposer duty has invalid slot for requested epoch; ignoring")
 			continue
 		}
+		if oneDutyPerSlot[respDuty.Slot%32] {
+			addedSlots++
+			if addedSlots == len(oneDutyPerSlot) {
+				break
+			}
+			continue
+		}
+
 		duties = append(duties, beaconblockproposer.NewDuty(respDuty.Slot, respDuty.ValidatorIndex))
+		oneDutyPerSlot[respDuty.Slot%32] = true
 	}
 	log.Trace().Dur("elapsed", time.Since(started)).Int("duties", len(duties)).Msg("Filtered proposer duties")
 
@@ -77,10 +88,10 @@ func (s *Service) scheduleProposals(ctx context.Context,
 			continue
 		}
 		go func(duty *beaconblockproposer.Duty) {
-			if err := s.beaconBlockProposer.Prepare(ctx, duty); err != nil {
-				log.Error().Uint64("proposal_slot", uint64(duty.Slot())).Err(err).Msg("Failed to prepare beacon block proposal")
-				return
-			}
+			// if err := s.beaconBlockProposer.Prepare(ctx, duty); err != nil {
+			// 	log.Error().Uint64("proposal_slot", uint64(duty.Slot())).Err(err).Msg("Failed to prepare beacon block proposal")
+			// 	return
+			// }
 			// Only bother trying to propose early if the alternative is later.
 			if s.maxProposalDelay > 0 {
 				if err := s.scheduler.ScheduleJob(ctx,

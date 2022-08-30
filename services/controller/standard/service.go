@@ -379,11 +379,11 @@ func (s *Service) epochTicker(ctx context.Context, data interface{}) {
 	}
 
 	// Expect at least one validator.
-	if len(validatorIndices) == 0 {
-		log.Warn().Msg("No active validators; not validating")
-		cancel()
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	log.Warn().Msg("No active validators; not validating")
+	// 	cancel()
+	// 	return
+	// }
 
 	// Done the preparation work available to us; wait for the end of the timer.
 	<-waitCtx.Done()
@@ -446,10 +446,10 @@ func (s *Service) prepareForEpoch(ctx context.Context, data interface{}) {
 		return
 	}
 	// Expect at least one validator.
-	if len(validatorIndices) == 0 {
-		log.Warn().Msg("No active validators; not validating")
-		return
-	}
+	// if len(validatorIndices) == 0 {
+	// 	log.Warn().Msg("No active validators; not validating")
+	// 	return
+	// }
 
 	go s.scheduleAttestations(ctx, prepareForEpochData.epoch, validatorIndices, false /* notCurrentSlot */)
 	go func() {

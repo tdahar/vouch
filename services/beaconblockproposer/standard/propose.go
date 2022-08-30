@@ -40,12 +40,12 @@ func (s *Service) Propose(ctx context.Context, data interface{}) {
 	log := log.With().Uint64("proposing_slot", uint64(duty.Slot())).Uint64("validator_index", uint64(duty.ValidatorIndex())).Logger()
 	log.Trace().Msg("Proposing")
 
-	var zeroSig phase0.BLSSignature
-	if duty.RANDAOReveal() == zeroSig {
-		log.Error().Msg("Missing RANDAO reveal")
-		s.monitor.BeaconBlockProposalCompleted(started, duty.Slot(), "failed")
-		return
-	}
+	// var zeroSig phase0.BLSSignature
+	// if duty.RANDAOReveal() == zeroSig {
+	// 	log.Error().Msg("Missing RANDAO reveal")
+	// 	s.monitor.BeaconBlockProposalCompleted(started, duty.Slot(), "failed")
+	// 	return
+	// }
 
 	var graffiti []byte
 	var err error
@@ -91,45 +91,46 @@ func (s *Service) proposeBlock(ctx context.Context,
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain proposal data")
 	}
-	if proposal == nil {
-		return errors.New("obtained nil beacon block proposal")
-	}
-	log.Trace().Dur("elapsed", time.Since(started)).Msg("Obtained proposal")
+	// if proposal == nil {
+	// 	return errors.New("obtained nil beacon block proposal")
+	// }
+	// log.Trace().Dur("elapsed", time.Since(started)).Msg("Obtained proposal")
 
-	proposalSlot, err := proposal.Slot()
-	if err != nil {
-		return errors.Wrap(err, "failed to obtain proposal slot")
-	}
+	// proposalSlot, err := proposal.Slot()
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to obtain proposal slot")
+	// }
 
-	if proposalSlot != duty.Slot() {
-		return errors.New("proposal data for incorrect slot")
-	}
+	// if proposalSlot != duty.Slot() {
+	// 	return errors.New("proposal data for incorrect slot")
+	// }
 
-	bodyRoot, err := proposal.BodyRoot()
-	if err != nil {
-		return errors.Wrap(err, "failed to calculate hash tree root of block body")
-	}
+	// bodyRoot, err := proposal.BodyRoot()
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to calculate hash tree root of block body")
+	// }
 
-	parentRoot, err := proposal.ParentRoot()
-	if err != nil {
-		return errors.Wrap(err, "failed to obtain parent root of block")
-	}
+	// parentRoot, err := proposal.ParentRoot()
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to obtain parent root of block")
+	// }
 
-	stateRoot, err := proposal.StateRoot()
-	if err != nil {
-		return errors.Wrap(err, "failed to obtain state root of block")
-	}
+	// stateRoot, err := proposal.StateRoot()
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to obtain state root of block")
+	// }
 
-	sig, err := s.beaconBlockSigner.SignBeaconBlockProposal(ctx,
-		duty.Account(),
-		proposalSlot,
-		duty.ValidatorIndex(),
-		parentRoot,
-		stateRoot,
-		bodyRoot)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign beacon block proposal")
-	}
+	// sig, err := s.beaconBlockSigner.SignBeaconBlockProposal(ctx,
+	// 	duty.Account(),
+	// 	proposalSlot,
+	// 	duty.ValidatorIndex(),
+	// 	parentRoot,
+	// 	stateRoot,
+	// 	bodyRoot)
+	// if err != nil {
+	// 	return errors.Wrap(err, "failed to sign beacon block proposal")
+	// }
+	sig := phase0.BLSSignature{}
 	log.Trace().Dur("elapsed", time.Since(started)).Msg("Signed proposal")
 
 	signedBlock := &spec.VersionedSignedBeaconBlock{

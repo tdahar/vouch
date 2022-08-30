@@ -47,6 +47,7 @@ func (*Service) sign(ctx context.Context,
 		if err != nil {
 			return phase0.BLSSignature{}, errors.Wrap(err, "failed to generate hash tree root")
 		}
+
 		sig, err = account.(e2wtypes.AccountSigner).Sign(ctx, root[:])
 		if err != nil {
 			return phase0.BLSSignature{}, err
