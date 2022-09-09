@@ -157,9 +157,9 @@ func (s *Service) proposeBlock(ctx context.Context,
 	}
 
 	// Submit the block.
-	if err := s.beaconBlockSubmitter.SubmitBeaconBlock(ctx, signedBlock); err != nil {
-		return errors.Wrap(err, "failed to submit beacon block proposal")
-	}
+	// if err := s.beaconBlockSubmitter.SubmitBeaconBlock(ctx, signedBlock); err != nil {
+	// 	return errors.Wrap(err, "failed to submit beacon block proposal")
+	// }
 
 	return nil
 }
