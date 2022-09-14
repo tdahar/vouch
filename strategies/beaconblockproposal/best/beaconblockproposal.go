@@ -22,15 +22,17 @@ import (
 	eth2client "github.com/attestantio/go-eth2-client"
 	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/attestantio/vouch/services/postgresql"
 	"github.com/attestantio/vouch/util"
 	"github.com/pkg/errors"
 )
 
 type beaconBlockResponse struct {
-	provider string
-	proposal *spec.VersionedBeaconBlock
-	score    float64
-	duration float64
+	provider   string
+	proposal   *spec.VersionedBeaconBlock
+	score      float64
+	duration   float64
+	AttMetrics postgresql.AttestationMetrics
 }
 
 // BeaconBlockProposal provides the best beacon block proposal from a number of beacon nodes.
@@ -95,9 +97,9 @@ func (s *Service) BeaconBlockProposal(ctx context.Context, slot phase0.Slot, ran
 		case resp := <-respCh:
 			responded++
 			log.Info().Str("label", resp.provider).Str("slot", fmt.Sprintf("%d", slot)).Str("score", fmt.Sprintf("%f", resp.score)).Msg("Block Proposal")
-			err := s.dbClient.InsertNewScore(int(slot), resp.provider, resp.score, resp.duration)
+			err := s.dbClient.InsertNewScore(int(slot), resp.provider, resp.score, resp.duration, resp.AttMetrics)
 			if err != nil {
-				log.Debug().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
+				log.Warn().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
 			}
 			if bestProposal == nil || resp.score > bestScore {
 				bestProposal = resp.proposal
@@ -146,11 +148,12 @@ func (s *Service) beaconBlockProposal(ctx context.Context,
 		return
 	}
 
-	score := s.scoreBeaconBlockProposal(ctx, name, proposal)
+	score, metrics := s.scoreBeaconBlockProposal(ctx, name, proposal)
 	respCh <- &beaconBlockResponse{
-		provider: name,
-		proposal: proposal,
-		score:    score,
-		duration: duration.Seconds(),
+		provider:   name,
+		proposal:   proposal,
+		score:      score,
+		duration:   duration.Seconds(),
+		AttMetrics: metrics,
 	}
 }

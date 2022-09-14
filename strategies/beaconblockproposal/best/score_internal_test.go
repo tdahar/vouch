@@ -860,7 +860,7 @@ func TestScore(t *testing.T) {
 			if test.priorBlocks != nil {
 				s.priorBlocksVotes = test.priorBlocks
 			}
-			score := s.scoreBeaconBlockProposal(context.Background(), test.name, test.block)
+			score, _ := s.scoreBeaconBlockProposal(context.Background(), test.name, test.block)
 			assert.Equal(t, test.score, score)
 		})
 	}

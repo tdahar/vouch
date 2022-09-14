@@ -23,6 +23,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/altair"
 	"github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/attestantio/vouch/services/postgresql"
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
@@ -31,12 +32,12 @@ import (
 func (s *Service) scoreBeaconBlockProposal(ctx context.Context,
 	name string,
 	blockProposal *spec.VersionedBeaconBlock,
-) float64 {
+) (float64, postgresql.AttestationMetrics) {
 	if blockProposal == nil {
-		return 0
+		return 0, postgresql.AttestationMetrics{}
 	}
 	if blockProposal.IsEmpty() {
-		return 0
+		return 0, postgresql.AttestationMetrics{}
 	}
 
 	// Obtain the slot of the block to which the proposal refers.
@@ -44,7 +45,7 @@ func (s *Service) scoreBeaconBlockProposal(ctx context.Context,
 	parentRoot, err := blockProposal.ParentRoot()
 	if err != nil {
 		log.Error().Str("version", blockProposal.Version.String()).Msg("Failed to obtain parent root")
-		return 0
+		return 0, postgresql.AttestationMetrics{}
 	}
 	parentSlot, err := s.blockRootToSlotCache.BlockRootToSlot(ctx, parentRoot)
 	if err != nil {
@@ -54,14 +55,14 @@ func (s *Service) scoreBeaconBlockProposal(ctx context.Context,
 
 	switch blockProposal.Version {
 	case spec.DataVersionPhase0:
-		return s.scorePhase0BeaconBlockProposal(ctx, name, parentSlot, blockProposal.Phase0)
+		return s.scorePhase0BeaconBlockProposal(ctx, name, parentSlot, blockProposal.Phase0), postgresql.AttestationMetrics{}
 	case spec.DataVersionAltair:
-		return s.scoreAltairBeaconBlockProposal(ctx, name, parentSlot, blockProposal.Altair)
+		return s.scoreAltairBeaconBlockProposal(ctx, name, parentSlot, blockProposal.Altair), postgresql.AttestationMetrics{}
 	case spec.DataVersionBellatrix:
 		return s.scoreBellatrixBeaconBlockProposal(ctx, name, parentSlot, blockProposal.Bellatrix)
 	default:
 		log.Error().Int("version", int(blockProposal.Version)).Msg("Unhandled block version")
-		return 0
+		return 0, postgresql.AttestationMetrics{}
 	}
 }
 
@@ -223,9 +224,14 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 	name string,
 	parentSlot phase0.Slot,
 	blockProposal *bellatrix.BeaconBlock,
-) float64 {
+) (float64, postgresql.AttestationMetrics) {
 	attestationScore := float64(0)
 	immediateAttestationScore := float64(0)
+
+	correctSource := 0
+	correctTargets := 0
+	correctHeads := 0
+	newVotes := 0
 
 	// We need to avoid duplicates in attestations.
 	// Map is attestation slot -> committee index -> validator committee index -> aggregate.
@@ -274,14 +280,18 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 		if targetCorrect {
 			// Target is correct (and timely).
 			score += float64(s.timelyTargetWeight) / float64(s.weightDenominator)
+			correctTargets += votes
 		}
 		if inclusionDistance <= 5 {
 			// Source is timely.
 			score += float64(s.timelySourceWeight) / float64(s.weightDenominator)
+			correctSource += votes
 		}
 		if headCorrect && inclusionDistance == 1 {
 			score += float64(s.timelyHeadWeight) / float64(s.weightDenominator)
+			correctHeads += votes
 		}
+		newVotes += votes
 		score *= float64(votes)
 		attestationScore += score
 		if inclusionDistance == 1 {
@@ -306,7 +316,16 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 		Float64("total", attestationScore+proposerSlashingScore+attesterSlashingScore+syncCommitteeScore).
 		Msg("Scored Altair block")
 
-	return attestationScore + proposerSlashingScore + attesterSlashingScore + syncCommitteeScore
+	attMetrics := postgresql.AttestationMetrics{
+		CorrectSource: correctSource,
+		CorrectTarget: correctTargets,
+		CorrectHead:   correctHeads,
+		Sync1Bits:     int(blockProposal.Body.SyncAggregate.SyncCommitteeBits.Count()),
+		AttNum:        len(blockProposal.Body.Attestations),
+		NewVotes:      newVotes,
+	}
+
+	return attestationScore + proposerSlashingScore + attesterSlashingScore + syncCommitteeScore, attMetrics
 }
 
 func scoreSlashings(attesterSlashings []*phase0.AttesterSlashing,
