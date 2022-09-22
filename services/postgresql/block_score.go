@@ -26,6 +26,7 @@ var (
 			f_sync_bits INT,
 			f_att_num INT,
 			f_new_votes INT,
+			f_after_missed BOOL,
 			CONSTRAINT PK_SlotAddr PRIMARY KEY (f_slot,f_label));`
 
 	InsertNewScore = `
@@ -39,8 +40,9 @@ var (
 			f_correct_head,
 			f_sync_bits,
 			f_att_num,
-			f_new_votes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
+			f_new_votes,
+			f_after_missed)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`
 )
 
 // in case the table did not exist
@@ -65,7 +67,8 @@ func (p *PostgresDBService) InsertNewScore(slot int, label string, score float64
 		attMetrics.CorrectHead,
 		attMetrics.Sync1Bits,
 		attMetrics.AttNum,
-		attMetrics.NewVotes)
+		attMetrics.NewVotes,
+		attMetrics.AfterMissed)
 
 	if err != nil {
 		return errors.Wrap(err, "error inserting row in score metrics table")
@@ -80,4 +83,5 @@ type AttestationMetrics struct {
 	Sync1Bits     int
 	AttNum        int
 	NewVotes      int
+	AfterMissed   bool
 }

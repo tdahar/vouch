@@ -316,6 +316,12 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 		Float64("total", attestationScore+proposerSlashingScore+attesterSlashingScore+syncCommitteeScore).
 		Msg("Scored Altair block")
 
+	afterMissed := false
+	if (blockProposal.Slot - parentSlot) > 1 {
+		// this means that there was a slot with missed block in the middle
+		afterMissed = true
+	}
+
 	attMetrics := postgresql.AttestationMetrics{
 		CorrectSource: correctSource,
 		CorrectTarget: correctTargets,
@@ -323,6 +329,7 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 		Sync1Bits:     int(blockProposal.Body.SyncAggregate.SyncCommitteeBits.Count()),
 		AttNum:        len(blockProposal.Body.Attestations),
 		NewVotes:      newVotes,
+		AfterMissed:   afterMissed,
 	}
 
 	return attestationScore + proposerSlashingScore + attesterSlashingScore + syncCommitteeScore, attMetrics

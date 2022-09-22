@@ -96,7 +96,7 @@ func (s *Service) BeaconBlockProposal(ctx context.Context, slot phase0.Slot, ran
 			log.Debug().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
 		case resp := <-respCh:
 			responded++
-			log.Info().Str("label", resp.provider).Str("slot", fmt.Sprintf("%d", slot)).Str("score", fmt.Sprintf("%f", resp.score)).Msg("Block Proposal")
+			log.Info().Str("label", resp.provider).Str("slot", fmt.Sprintf("%d", slot)).Str("score", fmt.Sprintf("%f", resp.score)).Str("afterMissed", fmt.Sprintf("%t", resp.AttMetrics.AfterMissed)).Msg("Block Proposal")
 			err := s.dbClient.InsertNewScore(int(slot), resp.provider, resp.score, resp.duration, resp.AttMetrics)
 			if err != nil {
 				log.Warn().Dur("elapsed", time.Since(started)).Err(err).Msg("Responded with error")
