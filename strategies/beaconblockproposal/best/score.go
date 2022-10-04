@@ -323,13 +323,17 @@ func (s *Service) scoreBellatrixBeaconBlockProposal(ctx context.Context,
 	}
 
 	attMetrics := postgresql.AttestationMetrics{
-		CorrectSource: correctSource,
-		CorrectTarget: correctTargets,
-		CorrectHead:   correctHeads,
-		Sync1Bits:     int(blockProposal.Body.SyncAggregate.SyncCommitteeBits.Count()),
-		AttNum:        len(blockProposal.Body.Attestations),
-		NewVotes:      newVotes,
-		AfterMissed:   afterMissed,
+		CorrectSource:         correctSource,
+		CorrectTarget:         correctTargets,
+		CorrectHead:           correctHeads,
+		Sync1Bits:             int(blockProposal.Body.SyncAggregate.SyncCommitteeBits.Count()),
+		AttNum:                len(blockProposal.Body.Attestations),
+		NewVotes:              newVotes,
+		AfterMissed:           afterMissed,
+		AttScore:              attestationScore,
+		ProposerSlashingScore: proposerSlashingScore,
+		AttSlashingScore:      attesterSlashingScore,
+		SyncScore:             syncCommitteeScore,
 	}
 
 	return attestationScore + proposerSlashingScore + attesterSlashingScore + syncCommitteeScore, attMetrics
